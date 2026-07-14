@@ -25,6 +25,18 @@ function sendOptions(res: any) {
   res.end();
 }
 
+function readBody(req: any): Promise<string> {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', (chunk: string) => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      resolve(body);
+    });
+  });
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {
     return sendOptions(res);
@@ -36,7 +48,8 @@ export default async function handler(req: any, res: any) {
 
   let body: RequestBody;
   try {
-    body = typeof req.body === 'object' ? req.body : JSON.parse(req.body);
+    const rawBody = await readBody(req);
+    body = JSON.parse(rawBody);
   } catch {
     return sendResponse(res, 400, { error: '无效的请求体' });
   }
