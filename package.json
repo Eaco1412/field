@@ -2,6 +2,9 @@
   "name": "emotion-wilderness",
   "version": "1.0.0",
   "main": "expo-router/entry",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
