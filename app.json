@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "情绪旷野",
+    "slug": "emotion-wilderness",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "emotion-wilderness",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "backgroundColor": "#FAF8F5",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.emotionwilderness.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FAF8F5"
+      },
+      "package": "com.emotionwilderness.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

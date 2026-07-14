@@ -1,0 +1,10 @@
+name = "kuangye-ai-proxy"
+main = "index.ts"
+compatibility_date = "2024-12-01"
+
+# 限流用 KV（免费额度每天 10 万次读 + 1000 次写，Demo 绰绰有余）
+# 首次部署前先创建: wrangler kv namespace create RATE_LIMIT
+# 然后把返回的 id 填到下面
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "在这里填入你的 KV namespace id"

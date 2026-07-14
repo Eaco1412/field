@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/ai-proxy.ts": {
+      "runtime": "@vercel/node@3.2.12"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/ai-proxy",
+      "dest": "/api/ai-proxy.ts"
+    }
+  ]
+}
