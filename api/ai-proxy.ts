@@ -1,13 +1,3 @@
-/**
- * Vercel Serverless Function 代理 —— 持有 DeepSeek API Key，转发请求。
- *
- * 部署步骤：
- *   1. 在 Vercel Dashboard 设置环境变量 DEEPSEEK_API_KEY
- *   2. 推送代码到 GitHub/GitLab，Vercel 会自动部署
- *   3. 部署成功后，API 地址为 https://your-project.vercel.app/api/ai-proxy
- *   4. 把 URL 填进 App 的 src/config/ai.ts → proxyUrl
- */
-
 const ALLOWED_MODELS = ['deepseek-v4-flash', 'deepseek-v4-pro'];
 
 interface RequestBody {
@@ -18,33 +8,37 @@ interface RequestBody {
   max_tokens?: number;
 }
 
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+function sendResponse(res: any, status: number, data: unknown) {
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+  });
+  res.end(JSON.stringify(data));
+}
+
+function sendOptions(res: any) {
+  res.writeHead(204, {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  });
+  res.end();
+}
+
+export default async function handler(req: any, res: any) {
+  if (req.method === 'OPTIONS') {
+    return sendOptions(res);
   }
 
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+  if (req.method !== 'POST') {
+    return sendResponse(res, 405, { error: 'Method Not Allowed' });
   }
 
   let body: RequestBody;
   try {
-    body = await request.json() as RequestBody;
+    body = typeof req.body === 'object' ? req.body : JSON.parse(req.body);
   } catch {
-    return new Response(JSON.stringify({ error: '无效的请求体' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return sendResponse(res, 400, { error: '无效的请求体' });
   }
 
   const model = ALLOWED_MODELS.includes(body.model || '')
@@ -61,10 +55,7 @@ export default async function handler(request: Request): Promise<Response> {
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: '服务端未配置 API Key' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return sendResponse(res, 500, { error: '服务端未配置 API Key' });
   }
 
   try {
@@ -80,20 +71,11 @@ export default async function handler(request: Request): Promise<Response> {
     const dsData = await dsRes.json();
 
     if (!dsRes.ok) {
-      return new Response(JSON.stringify({ error: 'DeepSeek 请求失败', detail: dsData }), {
-        status: dsRes.status,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      });
+      return sendResponse(res, dsRes.status, { error: 'DeepSeek 请求失败', detail: dsData });
     }
 
-    return new Response(JSON.stringify(dsData), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return sendResponse(res, 200, dsData);
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'DeepSeek 请求异常', detail: String(err) }), {
-      status: 502,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return sendResponse(res, 502, { error: 'DeepSeek 请求异常', detail: String(err) });
   }
 }

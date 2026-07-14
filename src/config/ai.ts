@@ -30,7 +30,7 @@ export const AI_CONFIG = {
    * Vercel 代理地址。部署到 Vercel 后填入（如 https://your-project.vercel.app/api/ai-proxy）。
    * 留空则禁用真实 AI，回退到本地关键词匹配。
    */
-  proxyUrl: '', // 部署到 Vercel 后填入（格式：https://your-project.vercel.app/api/ai-proxy）
+  proxyUrl: 'https://field-pink.vercel.app/api/ai-proxy', // 部署到 Vercel 后填入（格式：https://your-project.vercel.app/api/ai-proxy）
   /** 单次请求超时（毫秒）。超时后回退到本地 mock。 */
   timeoutMs: 30000,
   /** 采样温度。低温度保证输出稳定。 */
