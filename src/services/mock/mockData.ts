@@ -41,7 +41,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   cardCount: 3,
   moodScoreMode: 'combined',
   privacyLockEnabled: false,
-  aiModel: 'deepseek-chat',
+  aiModel: 'deepseek-v4-flash',
 };
 
 /** 预设日志（首次打开即展示完整使用效果） */

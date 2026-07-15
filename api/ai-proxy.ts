@@ -1,4 +1,4 @@
-const ALLOWED_MODELS = ['deepseek-chat', 'deepseek-reasoner'];
+const ALLOWED_MODELS = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-v4-flash', 'deepseek-v3'];
 
 interface RequestBody {
   model?: string;

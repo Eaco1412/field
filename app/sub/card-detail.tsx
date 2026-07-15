@@ -43,9 +43,18 @@ export default function CardDetailScreen() {
   // 方式1：通过 journalId + cardType 从全局 state 读取（推荐，数据完整）
   if (journalId && cardType) {
     const journal = state.journals.find((j) => j.id === journalId);
+    console.log('===== card-detail DEBUG =====');
+    console.log('journalId:', journalId);
+    console.log('cardType:', cardType);
+    console.log('journal found:', !!journal);
+    console.log('journal cards:', journal?.cards ? Object.keys(journal.cards) : 'none');
     if (journal?.cards) {
       const type = cardType as CardType;
       cardData = journal.cards[type] ?? null;
+      console.log('cardData:', JSON.stringify(cardData, null, 2));
+      console.log('has detail:', !!cardData?.detail);
+      console.log('detail length:', cardData?.detail?.length ?? 0);
+      console.log('content length:', cardData?.content?.length ?? 0);
     }
   }
 
@@ -53,6 +62,8 @@ export default function CardDetailScreen() {
   if (!cardData && card) {
     try {
       cardData = JSON.parse(card);
+      console.log('===== card-detail DEBUG (JSON fallback) =====');
+      console.log('cardData:', JSON.stringify(cardData, null, 2));
     } catch {
       // ignore
     }
@@ -102,12 +113,12 @@ export default function CardDetailScreen() {
       </View>
 
       {/* 卡片内容详情 */}
-      <View style={styles.section}>
+      <View style={[styles.section, { backgroundColor: '#F8FAFC', borderRadius: radius.card, padding: spacing.md }]}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="document-text-outline" size={18} color={colors.accent} />
-          <Text style={styles.sectionTitle}>详细内容</Text>
+          <Ionicons name="sparkles" size={18} color="#8B5CF6" />
+          <Text style={styles.sectionTitle}>AI 陪伴回复</Text>
         </View>
-        <Text style={styles.reasonText}>
+        <Text style={[styles.reasonText, { fontSize: fontSize.body, lineHeight: 24, color: colors.ink }]}>
           {cardData.detail || cardData.content}
         </Text>
       </View>

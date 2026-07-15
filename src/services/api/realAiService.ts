@@ -247,11 +247,14 @@ export const realAiService: AiService = {
 
     // 3) 未配置代理：回退本地
     if (!AI_ENABLED) {
+      logger.warn('[realAiService] AI_ENABLED is false, fallback to mock');
       return buildAnalysisResult(content, mode);
     }
 
+    logger.info('[realAiService] calling DeepSeek via proxy...', { proxyUrl: AI_CONFIG.proxyUrl });
+
     // 4) 通过代理调用 DeepSeek（仅传当条日志，不含历史）
-    const selectedModel: AiModelId = model ?? 'deepseek-chat';
+    const selectedModel: AiModelId = model ?? 'deepseek-v4-flash';
     try {
       const rawText = await callViaProxy(content, selectedModel);
       logger.debug('[realAiService] raw response', { raw: rawText.slice(0, 600) });

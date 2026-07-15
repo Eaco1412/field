@@ -181,8 +181,8 @@ export interface UserSettings {
   moodScoreMode: 'manual' | 'auto' | 'combined';
   /** 隐私加锁 */
   privacyLockEnabled: boolean;
-  /** AI 模型选择（deepseek-chat / deepseek-reasoner） */
-  aiModel: 'deepseek-chat' | 'deepseek-reasoner';
+  /** AI 模型选择 */
+  aiModel: 'deepseek-v4-flash' | 'deepseek-chat' | 'deepseek-reasoner';
 }
 
 /** 用户档案（我的页头部） */

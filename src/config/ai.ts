@@ -19,7 +19,8 @@
 
 /** 可选的 DeepSeek 模型列表。 */
 export const AI_MODELS = [
-  { id: 'deepseek-chat', label: 'DeepSeek Chat', desc: '速度快、便宜，日常情绪分析足够' },
+  { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', desc: '最新模型，速度快，效果好，推荐日常使用' },
+  { id: 'deepseek-chat', label: 'DeepSeek Chat', desc: '经典模型，稳定可靠' },
   { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', desc: '推理更深，适合复杂情绪，但更慢更贵' },
 ] as const;
 
@@ -32,7 +33,7 @@ export const AI_CONFIG = {
    */
   proxyUrl: 'https://field-pink.vercel.app/api/ai-proxy', // 部署到 Vercel 后填入（格式：https://your-project.vercel.app/api/ai-proxy）
   /** 单次请求超时（毫秒）。超时后回退到本地 mock。 */
-  timeoutMs: 30000,
+  timeoutMs: 60000,
   /** 采样温度。低温度保证输出稳定。 */
   temperature: 0.7,
 } as const;
