@@ -1,99 +1,49 @@
-const ALLOWED_MODELS = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-v4-flash', 'deepseek-v3'];
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+const ALLOWED_MODELS = ['deepseek-chat', 'deepseek-reasoner'];
 
 interface RequestBody {
   model?: string;
   messages?: unknown;
   temperature?: number;
-  response_format?: unknown;
   max_tokens?: number;
 }
 
-function sendResponse(res: any, status: number, data: unknown) {
-  res.writeHead(status, {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-  });
-  res.end(JSON.stringify(data));
-}
-
-function sendOptions(res: any) {
-  res.writeHead(204, {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  });
-  res.end();
-}
-
-function readBody(req: any): Promise<string> {
-  return new Promise((resolve) => {
-    let body = '';
-    req.on('data', (chunk: string) => {
-      body += chunk;
-    });
-    req.on('end', () => {
-      resolve(body);
-    });
-  });
-}
-
-export default async function handler(req: any, res: any) {
-  console.log('[AI Proxy] Incoming request:', {
-    method: req.method,
-    url: req.url,
-    headers: {
-      'content-type': req.headers['content-type'],
-      'content-length': req.headers['content-length'],
-    },
-  });
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    console.log('[AI Proxy] Handling OPTIONS preflight');
-    return sendOptions(res);
+    return res.status(204).end();
   }
 
   if (req.method !== 'POST') {
-    console.log('[AI Proxy] Method not allowed:', req.method);
-    return sendResponse(res, 405, { error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  let body: RequestBody;
-  let rawBody = '';
-  try {
-    rawBody = await readBody(req);
-    console.log('[AI Proxy] Raw body length:', rawBody.length);
-    console.log('[AI Proxy] Raw body preview:', rawBody.slice(0, 200));
-    body = JSON.parse(rawBody);
-    console.log('[AI Proxy] JSON parse success, model:', body.model);
-  } catch (err) {
-    console.error('[AI Proxy] JSON parse failed:', {
-      error: String(err),
-      rawBody: rawBody.slice(0, 300),
-      rawBodyType: typeof rawBody,
-    });
-    return sendResponse(res, 400, { error: '无效的请求体', detail: String(err), rawPreview: rawBody.slice(0, 200) });
-  }
+  // Vercel 自动解析 body，直接用 req.body
+  const body: RequestBody = req.body || {};
+  console.log('[AI Proxy] Received body:', JSON.stringify(body).slice(0, 300));
 
   const model = ALLOWED_MODELS.includes(body.model || '')
     ? (body.model as string)
     : 'deepseek-chat';
 
-  const payload: Record<string, unknown> = {
+  const payload = {
     model,
     messages: body.messages,
     temperature: typeof body.temperature === 'number' ? body.temperature : 0.7,
-    max_tokens: typeof body.max_tokens === 'number' ? Math.min(body.max_tokens, 1200) : 800,
+    max_tokens: typeof body.max_tokens === 'number' ? Math.min(body.max_tokens, 800) : 400,
   };
 
-  if (body.response_format) {
-    payload.response_format = body.response_format;
-  }
-
-  console.log('[AI Proxy] Request:', JSON.stringify(payload));
+  console.log('[AI Proxy] Sending to DeepSeek:', JSON.stringify(payload).slice(0, 300));
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    return sendResponse(res, 500, { error: '服务端未配置 API Key' });
+    console.error('[AI Proxy] No API key configured');
+    return res.status(500).json({ error: '服务端未配置 API Key' });
   }
 
   try {
@@ -107,15 +57,16 @@ export default async function handler(req: any, res: any) {
     });
 
     const dsData = await dsRes.json();
-    console.log('[AI Proxy] Response:', JSON.stringify({ status: dsRes.status, data: dsData }));
+    console.log('[AI Proxy] DeepSeek response status:', dsRes.status);
 
     if (!dsRes.ok) {
-      return sendResponse(res, dsRes.status, { error: 'DeepSeek 请求失败', detail: dsData });
+      console.error('[AI Proxy] DeepSeek error:', JSON.stringify(dsData).slice(0, 300));
+      return res.status(dsRes.status).json({ error: 'DeepSeek 请求失败', detail: dsData });
     }
 
-    return sendResponse(res, 200, dsData);
+    return res.status(200).json(dsData);
   } catch (err) {
-    console.error('[AI Proxy] Error:', String(err));
-    return sendResponse(res, 502, { error: 'DeepSeek 请求异常', detail: String(err) });
+    console.error('[AI Proxy] Fetch error:', String(err));
+    return res.status(502).json({ error: 'DeepSeek 请求异常', detail: String(err) });
   }
 }
