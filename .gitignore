@@ -35,3 +35,5 @@ yarn-error.*
 
 # Env
 .env
+.env.local
+.env.*.local
