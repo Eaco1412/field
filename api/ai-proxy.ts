@@ -1,4 +1,4 @@
-const ALLOWED_MODELS = ['deepseek-v4-flash', 'deepseek-v4-pro'];
+const ALLOWED_MODELS = ['deepseek-chat', 'deepseek-reasoner'];
 
 interface RequestBody {
   model?: string;
@@ -50,21 +50,26 @@ export default async function handler(req: any, res: any) {
   try {
     const rawBody = await readBody(req);
     body = JSON.parse(rawBody);
-  } catch {
-    return sendResponse(res, 400, { error: '无效的请求体' });
+  } catch (err) {
+    return sendResponse(res, 400, { error: '无效的请求体', detail: String(err) });
   }
 
   const model = ALLOWED_MODELS.includes(body.model || '')
     ? (body.model as string)
-    : 'deepseek-v4-flash';
+    : 'deepseek-chat';
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     model,
     messages: body.messages,
     temperature: typeof body.temperature === 'number' ? body.temperature : 0.7,
-    response_format: body.response_format ?? { type: 'json_object' },
     max_tokens: typeof body.max_tokens === 'number' ? Math.min(body.max_tokens, 1200) : 800,
   };
+
+  if (body.response_format) {
+    payload.response_format = body.response_format;
+  }
+
+  console.log('[AI Proxy] Request:', JSON.stringify(payload));
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -82,6 +87,7 @@ export default async function handler(req: any, res: any) {
     });
 
     const dsData = await dsRes.json();
+    console.log('[AI Proxy] Response:', JSON.stringify({ status: dsRes.status, data: dsData }));
 
     if (!dsRes.ok) {
       return sendResponse(res, dsRes.status, { error: 'DeepSeek 请求失败', detail: dsData });
@@ -89,6 +95,7 @@ export default async function handler(req: any, res: any) {
 
     return sendResponse(res, 200, dsData);
   } catch (err) {
+    console.error('[AI Proxy] Error:', String(err));
     return sendResponse(res, 502, { error: 'DeepSeek 请求异常', detail: String(err) });
   }
 }

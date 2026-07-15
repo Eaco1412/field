@@ -19,8 +19,8 @@
 
 /** 可选的 DeepSeek 模型列表。 */
 export const AI_MODELS = [
-  { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', desc: '速度快、便宜，日常情绪分析足够' },
-  { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', desc: '推理更深，适合复杂情绪，但更慢更贵' },
+  { id: 'deepseek-chat', label: 'DeepSeek Chat', desc: '速度快、便宜，日常情绪分析足够' },
+  { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', desc: '推理更深，适合复杂情绪，但更慢更贵' },
 ] as const;
 
 export type AiModelId = (typeof AI_MODELS)[number]['id'];

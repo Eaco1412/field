@@ -59,6 +59,8 @@ export interface SupportCard {
   content: string;
   /** 关联到发现页的推荐项 id */
   sourceItemId?: string;
+  /** 详细内容（AI 深度回复） */
+  detail?: string;
 }
 
 /** 高危响应信息 */
@@ -179,8 +181,8 @@ export interface UserSettings {
   moodScoreMode: 'manual' | 'auto' | 'combined';
   /** 隐私加锁 */
   privacyLockEnabled: boolean;
-  /** AI 模型选择（deepseek-v4-flash / deepseek-v4-pro） */
-  aiModel: 'deepseek-v4-flash' | 'deepseek-v4-pro';
+  /** AI 模型选择（deepseek-chat / deepseek-reasoner） */
+  aiModel: 'deepseek-chat' | 'deepseek-reasoner';
 }
 
 /** 用户档案（我的页头部） */

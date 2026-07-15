@@ -54,6 +54,7 @@ interface AiRawResponse {
   aiMood?: unknown;
   analysis?: unknown;
   understanding?: unknown;
+  understandingDetail?: unknown;
   action?: unknown;
   actionItemId?: unknown;
   help?: unknown;
@@ -78,12 +79,13 @@ const SYSTEM_PROMPT = `你是"旷野笔记"App 里的情绪陪伴者。你在阅
 【aiMood】1-5 整数：1=很差（危机/极度低落），2=不好，3=一般，4=不错，5=很好。
 
 【卡片内容要求】
-- understanding：先共情，让用户感到被听见，不要急着给建议。
-- action：一个具体、微小、今天就能做的小行动，不要宏大目标。同时从给定行动清单里选最贴近的 actionItemId。
-- help：温柔的求助引导，不施压。
+- understanding：一句话共情，简短有力，不超过30字，放在卡片上展示。必填。
+- understandingDetail：详细的共情回复，300字左右，分3-4段，用"\n\n"分隔段落。先共情让用户感到被听见，再温和地给出一个新的视角或小小的鼓励。不要急着给建议，不要说教。必填。
+- action：一个具体、微小、今天就能做的小行动，不要宏大目标。同时从给定行动清单里选最贴近的 actionItemId。必填。
+- help：温柔的求助引导，不施压。必填。
 
 【输出格式】只输出一个 JSON 对象，不要任何额外文字、不要 markdown 代码块。结构：
-{"themes":["..."],"riskLevel":"...","aiMood":N,"analysis":"...","understanding":"...","action":"...","actionItemId":"...","help":"..."}`;
+{"themes":["..."],"riskLevel":"...","aiMood":N,"analysis":"...","understanding":"...","understandingDetail":"...","action":"...","actionItemId":"...","help":"..."}`;
 
 function buildUserPrompt(content: string): string {
   const itemList = ACTION_ITEMS.map(
@@ -129,6 +131,10 @@ function mapToAnalysisResult(raw: AiRawResponse): AnalysisResult | null {
   const aiMood = asMood(raw.aiMood);
   const analysis = asString(raw.analysis);
   const understanding = asString(raw.understanding);
+  let understandingDetail = asString(raw.understandingDetail);
+  if (!understandingDetail && analysis && analysis.length > 50) {
+    understandingDetail = analysis;
+  }
   const actionText = asString(raw.action);
   const help = asString(raw.help);
   let actionItemId = asString(raw.actionItemId);
@@ -165,10 +171,10 @@ function mapToAnalysisResult(raw: AiRawResponse): AnalysisResult | null {
     aiMood,
     analysis,
     cards: {
-      understanding: makeCard('understanding', '理解卡', understanding),
-      action: makeCard('action', '行动卡', actionText, actionItemId),
-      help: makeCard('help', '求助卡', help),
-    },
+        understanding: makeCard('understanding', '理解卡', understanding, undefined, understandingDetail),
+        action: makeCard('action', '行动卡', actionText, actionItemId),
+        help: makeCard('help', '求助卡', help),
+      },
   };
 }
 
@@ -177,6 +183,7 @@ function makeCard(
   title: string,
   content: string,
   sourceItemId?: string,
+  detail?: string,
 ): SupportCard {
   const stamp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   return {
@@ -185,6 +192,7 @@ function makeCard(
     title,
     content,
     sourceItemId,
+    detail,
   };
 }
 
@@ -205,7 +213,7 @@ async function callViaProxy(content: string, model: AiModelId): Promise<string> 
         ],
         temperature: AI_CONFIG.temperature,
         response_format: { type: 'json_object' },
-        max_tokens: 800,
+        max_tokens: 1200,
       }),
     });
     if (!res.ok) {
@@ -243,10 +251,17 @@ export const realAiService: AiService = {
     }
 
     // 4) 通过代理调用 DeepSeek（仅传当条日志，不含历史）
-    const selectedModel: AiModelId = model ?? 'deepseek-v4-flash';
+    const selectedModel: AiModelId = model ?? 'deepseek-chat';
     try {
       const rawText = await callViaProxy(content, selectedModel);
+      logger.debug('[realAiService] raw response', { raw: rawText.slice(0, 600) });
       const parsed = JSON.parse(rawText) as AiRawResponse;
+      logger.debug('[realAiService] parsed fields', {
+        hasUnderstanding: !!parsed.understanding,
+        hasUnderstandingDetail: !!parsed.understandingDetail,
+        understandingLen: String(parsed.understanding).length,
+        detailLen: String(parsed.understandingDetail).length,
+      });
       const result = mapToAnalysisResult(parsed);
       if (!result) {
         logger.warn('[realAiService] model output incomplete, fallback to mock');
@@ -256,11 +271,15 @@ export const realAiService: AiService = {
         model: selectedModel,
         themes: result.themes,
         riskLevel: result.riskLevel,
+        hasDetail: !!result.cards?.understanding?.detail,
+        detailLen: result.cards?.understanding?.detail?.length ?? 0,
+        understanding: result.cards?.understanding?.content?.slice(0, 60),
+        detailPreview: result.cards?.understanding?.detail?.slice(0, 80),
       });
       return result;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      logger.error('[realAiService] analyze failed, fallback to mock', { error: errMsg });
+      logger.debug('[realAiService] analyze failed, fallback to mock', { error: errMsg });
       return buildAnalysisResult(content, mode);
     }
   },

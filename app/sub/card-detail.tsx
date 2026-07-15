@@ -35,8 +35,16 @@ export default function CardDetailScreen() {
   let cardData: SupportCardType | null = null;
   try {
     cardData = JSON.parse(card || '');
-  } catch {
-    // ignore
+    logger.info('[card-detail] received card', {
+      type: cardData?.type,
+      hasDetail: !!cardData?.detail,
+      detailLen: cardData?.detail?.length ?? 0,
+      contentLen: cardData?.content?.length ?? 0,
+      contentPreview: cardData?.content?.slice(0, 50),
+      detailPreview: cardData?.detail?.slice(0, 80),
+    });
+  } catch (e) {
+    logger.error('[card-detail] parse card failed', { error: String(e) });
   }
 
   if (!cardData) {
@@ -88,7 +96,9 @@ export default function CardDetailScreen() {
           <Ionicons name="document-text-outline" size={18} color={colors.accent} />
           <Text style={styles.sectionTitle}>详细内容</Text>
         </View>
-        <Text style={styles.reasonText}>{cardData.content}</Text>
+        <Text style={styles.reasonText}>
+          {cardData.detail || cardData.content}
+        </Text>
       </View>
 
       {/* 求助卡：额外资源 */}
