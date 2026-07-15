@@ -38,20 +38,40 @@ function readBody(req: any): Promise<string> {
 }
 
 export default async function handler(req: any, res: any) {
+  console.log('[AI Proxy] Incoming request:', {
+    method: req.method,
+    url: req.url,
+    headers: {
+      'content-type': req.headers['content-type'],
+      'content-length': req.headers['content-length'],
+    },
+  });
+
   if (req.method === 'OPTIONS') {
+    console.log('[AI Proxy] Handling OPTIONS preflight');
     return sendOptions(res);
   }
 
   if (req.method !== 'POST') {
+    console.log('[AI Proxy] Method not allowed:', req.method);
     return sendResponse(res, 405, { error: 'Method Not Allowed' });
   }
 
   let body: RequestBody;
+  let rawBody = '';
   try {
-    const rawBody = await readBody(req);
+    rawBody = await readBody(req);
+    console.log('[AI Proxy] Raw body length:', rawBody.length);
+    console.log('[AI Proxy] Raw body preview:', rawBody.slice(0, 200));
     body = JSON.parse(rawBody);
+    console.log('[AI Proxy] JSON parse success, model:', body.model);
   } catch (err) {
-    return sendResponse(res, 400, { error: '无效的请求体', detail: String(err) });
+    console.error('[AI Proxy] JSON parse failed:', {
+      error: String(err),
+      rawBody: rawBody.slice(0, 300),
+      rawBodyType: typeof rawBody,
+    });
+    return sendResponse(res, 400, { error: '无效的请求体', detail: String(err), rawPreview: rawBody.slice(0, 200) });
   }
 
   const model = ALLOWED_MODELS.includes(body.model || '')

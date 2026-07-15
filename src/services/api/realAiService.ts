@@ -176,7 +176,6 @@ async function callViaProxy(content: string, model: AiModelId): Promise<string> 
     ],
     temperature: AI_CONFIG.temperature,
     max_tokens: 400,
-    response_format: { type: 'json_object' },
   };
 
   logger.info('[realAiService] >>> 发送请求到代理', {
