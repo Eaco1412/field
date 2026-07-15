@@ -17,7 +17,7 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
   silent: 100,
 };
 
-const TAG = '[情绪旷野]';
+const TAG = '[情绪星野]';
 
 function shouldLog(level: LogLevel): boolean {
   return LEVEL_ORDER[level] >= LEVEL_ORDER[CURRENT_LEVEL];

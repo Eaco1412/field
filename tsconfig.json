@@ -19,6 +19,8 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "worker"
+    "worker",
+    "api",
+    "scf"
   ]
 }

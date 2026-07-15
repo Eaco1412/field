@@ -140,7 +140,7 @@ function YearSummary({ totalJournals, totalActions }: { totalJournals: number; t
         </View>
       </View>
       <Text style={styles.yearDesc}>
-        这一年，你在旷野里走了很远的路。{'\n'}
+        这一年，你在星野里走了很远的路。{'\n'}
         每一次记录、每一个小行动，{'\n'}
         都是你认真生活的证明。
       </Text>

@@ -3,11 +3,11 @@
  * 所有界面文字统一从这里引用，便于后续国际化与维护。
  */
 
-export const APP_NAME = '情绪旷野';
+export const APP_NAME = '情绪星野';
 
 export const STRINGS = {
   // 通用
-  appName: '情绪旷野',
+  appName: '情绪星野',
   back: '返回',
   send: '发送',
   analyzing: '正在认真听你说…',
@@ -95,8 +95,8 @@ export const STRINGS = {
   recDetailSource: '来源',
 
   // 我的页
-  profileNickname: '旷野探索者',
-  profileSignature: '在旷野里，慢慢走',
+  profileNickname: '星野探索者',
+  profileSignature: '在星野里，慢慢走',
   profileStreak: '连续记录',
   profileActions: '完成行动',
   profilePoints: '积分',
@@ -143,7 +143,7 @@ export const STRINGS = {
   settingsMoodMode: '心情评分偏好',
   settingsPrivacyLock: '隐私加锁',
   settingsAiModel: 'AI 模型',
-  settingsAbout: '关于情绪旷野',
+  settingsAbout: '关于情绪星野',
   settingsClear: '清除所有数据（重置 Demo）',
   moodManual: '手动设置',
   moodAuto: '自动判断',
@@ -151,7 +151,7 @@ export const STRINGS = {
   clearConfirm: '确定要清除所有数据吗？此操作不可恢复。',
 
   // 关于
-  aboutDesc: '情绪旷野是一个面向青少年的 AI 情绪陪伴与行动引导 Demo。所有数据仅保存在本地。',
+  aboutDesc: '情绪星野是一个面向青少年的 AI 情绪陪伴与行动引导 Demo。所有数据仅保存在本地。',
 
   // 高危
   crisisMessage: '我看到你现在很痛苦。你的安全比什么都重要。',

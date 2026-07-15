@@ -27,8 +27,8 @@ const PUZZLE_IMG_4 = require('../../picture/ab77308585bf45a1dc42f20ad0678bab.jpg
 
 /** 默认用户档案 */
 export const DEFAULT_PROFILE: UserProfile = {
-  nickname: '旷野探索者',
-  signature: '在旷野里，慢慢走',
+  nickname: '星野探索者',
+  signature: '在星野里，慢慢走',
   points: 12,
   streakDays: 3,
   completedActions: 2,

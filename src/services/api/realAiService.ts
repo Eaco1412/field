@@ -47,6 +47,13 @@ const ALLOWED_RISK_SET: ReadonlySet<RiskLevel> = new Set([
   'crisis',
 ]);
 
+interface AiActionDetail {
+  description?: unknown;
+  highlights?: unknown;
+  reason?: unknown;
+  howToStart?: unknown;
+}
+
 /** 模型返回的原始结构。 */
 interface AiRawResponse {
   themes?: unknown;
@@ -56,12 +63,37 @@ interface AiRawResponse {
   understanding?: unknown;
   understandingDetail?: unknown;
   action?: unknown;
+  actionDetail?: AiActionDetail;
   actionItemId?: unknown;
   help?: unknown;
 }
 
 const SYSTEM_PROMPT = `你是情绪陪伴者。输出纯JSON，无markdown标记。
-字段：themes(数组，可选：academic/selfDoubt/interpersonal/lifeConfusion/academicAnxiety)，riskLevel(normal/elevated/crisis)，aiMood(1-5)，analysis(简短回应)，understanding(≤30字共情)，understandingDetail(100字左右回复)，action(小行动)，actionItemId(从用户消息中选)，help(求助引导)。
+
+字段要求：
+- themes: 数组，可选值：academic/selfDoubt/interpersonal/lifeConfusion/academicAnxiety
+- riskLevel: normal/elevated/crisis
+- aiMood: 1-5整数
+- analysis: 简短回应（30字以内）
+- understanding: ≤30字共情
+- understandingDetail: 100字左右详细回复，共情、安慰或鼓励
+- action: 行动推荐标题（≤20字）
+- actionDetail: 行动推荐详情，包含：
+  - description: 行动描述（≤50字）
+  - highlights: 亮点特色数组（3条，每条≤40字）
+  - reason: 推荐理由（80字左右）
+  - howToStart: 如何开始（60字左右）
+- actionItemId: 填空字符串即可
+- help: 求助引导（30字以内）
+
+行动推荐规则：
+- 必须积极正面，能对用户当前状态起到帮助
+- 参考以下例子设计行动：
+  例1（疲惫时）："泡一杯热饮" → 亮点：感受温度变化、专注品尝、3分钟安静；理由：给身体温暖，享受停顿；开始：找杯子泡热饮，慢慢喝完
+  例2（压力大时）："写下三件小事" → 亮点：重新定义"好"、发现被忽略的努力、积累善意；理由：低谷时容易只看到不好的；开始：写三件今天做得不错的事
+  例3（焦虑时）："安静散步10分钟" → 亮点：不戴耳机、感受脚步、大脑休息；理由：脱离信息输入，安静有治愈力；开始：不带耳机走10分钟
+- 行动要具体、可执行，不需要特殊工具或条件
+
 有自伤意图时riskLevel=crisis，其他字段为空。`;
 
 function buildUserPrompt(content: string): string {
@@ -109,6 +141,18 @@ function mapToAnalysisResult(raw: AiRawResponse): AnalysisResult | null {
     actionItemId = '';
   }
 
+  const actionDetailRaw = raw.actionDetail;
+  const actionDetail = actionDetailRaw && typeof actionDetailRaw === 'object'
+    ? {
+        description: asString(actionDetailRaw.description),
+        highlights: Array.isArray(actionDetailRaw.highlights)
+          ? actionDetailRaw.highlights.map((h) => asString(h)).filter(Boolean).slice(0, 3)
+          : [],
+        reason: asString(actionDetailRaw.reason),
+        howToStart: asString(actionDetailRaw.howToStart),
+      }
+    : undefined;
+
   if (riskLevel === 'crisis') {
     return {
       themes,
@@ -132,6 +176,12 @@ function mapToAnalysisResult(raw: AiRawResponse): AnalysisResult | null {
     actionItemId = 'act2';
   }
 
+  const actionDetailText = actionDetail
+    ? `推荐理由：${actionDetail.reason}\n\n${actionDetail.highlights.map((h, i) => `${i + 1}. ${h}`).join('\n')}\n\n开始方式：${actionDetail.howToStart}`
+    : '';
+
+  const hasValidDetail = actionDetail && actionDetail.description && actionDetail.reason;
+
   return {
     themes,
     riskLevel,
@@ -139,9 +189,10 @@ function mapToAnalysisResult(raw: AiRawResponse): AnalysisResult | null {
     analysis,
     cards: {
         understanding: makeCard('understanding', '理解卡', understanding, undefined, understandingDetail),
-        action: makeCard('action', '行动卡', actionText, actionItemId),
+        action: makeCard('action', '行动卡', actionText, actionItemId, actionDetailText),
         help: makeCard('help', '求助卡', help),
       },
+    actionDetail: hasValidDetail ? actionDetail : undefined,
   };
 }
 
@@ -165,9 +216,6 @@ function makeCard(
 
 /** 通过 Worker 代理调用 DeepSeek，返回模型输出中的 content 字段。 */
 async function callViaProxy(content: string, model: AiModelId): Promise<string> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), AI_CONFIG.timeoutMs);
-
   const requestBody = {
     model,
     messages: [
@@ -186,14 +234,12 @@ async function callViaProxy(content: string, model: AiModelId): Promise<string> 
     requestBody: JSON.stringify(requestBody).slice(0, 500),
   });
 
-  try {
-    const res = await fetch(AI_CONFIG.proxyUrl, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    });
-
+  // 用 Promise.race 实现超时，避免 AbortController 在 RN 中的兼容性问题
+  const fetchPromise = fetch(AI_CONFIG.proxyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody),
+  }).then(async (res) => {
     logger.info('[realAiService] <<< 代理返回 HTTP 状态', { status: res.status, statusText: res.statusText });
 
     if (!res.ok) {
@@ -204,7 +250,6 @@ async function callViaProxy(content: string, model: AiModelId): Promise<string> 
 
     const data = await res.json();
 
-    // 打印完整的 DeepSeek 响应结构
     logger.info('[realAiService] <<< DeepSeek 完整响应', {
       model: data?.model,
       id: data?.id,
@@ -226,9 +271,16 @@ async function callViaProxy(content: string, model: AiModelId): Promise<string> 
       throw new Error('模型返回结构异常');
     }
     return message;
-  } finally {
-    clearTimeout(timer);
-  }
+  });
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      logger.error('[realAiService] <<< 请求超时', { timeoutMs: AI_CONFIG.timeoutMs });
+      reject(new Error(`请求超时 (${AI_CONFIG.timeoutMs}ms)`));
+    }, AI_CONFIG.timeoutMs);
+  });
+
+  return Promise.race([fetchPromise, timeoutPromise]);
 }
 
 function cleanJsonResponse(text: string): string {

@@ -16,6 +16,7 @@ export function useJournal() {
     setCardFeedback,
     replaceCard,
     addPendingAction,
+    addRecommendation,
   } = useApp();
 
   const journals = state.journals;
@@ -65,11 +66,27 @@ export function useJournal() {
           puzzleId: recItem?.puzzleId,
           puzzlePieces: recItem?.puzzlePieces ?? 1,
         });
+
+        if (analysis.actionDetail && actionCard.content) {
+          addRecommendation({
+            title: actionCard.content,
+            description: analysis.actionDetail.description || actionCard.content,
+            category: 'action',
+            tags: ['AI推荐', '个性化'],
+            puzzlePieces: 1,
+            detail: {
+              source: 'AI推荐',
+              highlights: analysis.actionDetail.highlights,
+              reason: analysis.actionDetail.reason,
+              howToStart: analysis.actionDetail.howToStart,
+            },
+          });
+        }
       }
 
       return entry;
     },
-    [addJournal, addPendingAction, state.settings.actionRecommendationEnabled, state.recommendations],
+    [addJournal, addPendingAction, addRecommendation, state.settings.actionRecommendationEnabled, state.recommendations],
   );
 
   const getByDate = useCallback(

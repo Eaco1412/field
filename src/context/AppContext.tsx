@@ -37,6 +37,7 @@ import type {
   JournalMode,
   PendingAction,
   Puzzle,
+  RecommendationItem,
   UserProfile,
   UserSettings,
 } from '../services/types';
@@ -62,6 +63,8 @@ type Action =
   | { type: 'REMOVE_PENDING_ACTION'; id: string }
   | { type: 'UPDATE_PENDING_ACTION'; id: string; patch: Partial<PendingAction> }
   | { type: 'ADD_COMPLETED_ITEM'; itemId: string }
+  // recommendations
+  | { type: 'ADD_RECOMMENDATION'; payload: RecommendationItem }
   // puzzle
   | { type: 'ADD_PUZZLE_PIECES'; puzzleId: string; count: number }
   // achievement
@@ -158,6 +161,12 @@ function reducer(state: AppDataState, action: Action): AppDataState {
         ...state,
         completedItemIds: [...state.completedItemIds, action.itemId],
       };
+    case 'ADD_RECOMMENDATION':
+      if (state.recommendations.some((r) => r.id === action.payload.id)) return state;
+      return {
+        ...state,
+        recommendations: [...state.recommendations, action.payload],
+      };
     case 'ADD_PUZZLE_PIECES': {
       const puzzles = state.puzzles.map((p): Puzzle => {
         if (p.id !== action.puzzleId) return p;
@@ -209,6 +218,7 @@ interface AppContextValue {
   addPuzzlePieces(puzzleId: string, count: number): void;
   unlockAchievement(id: string): void;
   completeAction(pendingActionId: string): void;
+  addRecommendation(item: Omit<RecommendationItem, 'id'>): RecommendationItem;
   resetAll(): Promise<void>;
 }
 
@@ -384,6 +394,15 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: 'REMOVE_PENDING_ACTION', id: pendingActionId });
   }, [state.pendingActions, state.profile, state.achievements]);
 
+  const addRecommendation = useCallback<AppContextValue['addRecommendation']>((item) => {
+    const recommendation: RecommendationItem = {
+      id: `ai-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      ...item,
+    };
+    dispatch({ type: 'ADD_RECOMMENDATION', payload: recommendation });
+    return recommendation;
+  }, []);
+
   const resetAll = useCallback(async () => {
     await clearAppState();
     await saveAppState(INITIAL_STATE);
@@ -405,6 +424,7 @@ export function AppProvider({ children }: AppProviderProps) {
       addPuzzlePieces,
       unlockAchievement,
       completeAction,
+      addRecommendation,
       resetAll,
     }),
     [
@@ -421,6 +441,7 @@ export function AppProvider({ children }: AppProviderProps) {
       addPuzzlePieces,
       unlockAchievement,
       completeAction,
+      addRecommendation,
       resetAll,
     ],
   );

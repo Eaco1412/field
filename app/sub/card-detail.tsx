@@ -103,7 +103,7 @@ export default function CardDetailScreen() {
       <View style={[styles.section, { backgroundColor: '#F8FAFC', borderRadius: radius.card, padding: spacing.md }]}>
         <View style={styles.sectionHeader}>
           <Ionicons name="sparkles" size={18} color="#8B5CF6" />
-          <Text style={styles.sectionTitle}>AI 陪伴回复</Text>
+          <Text style={styles.sectionTitle}>陪伴回复</Text>
         </View>
         <Text style={[styles.reasonText, { fontSize: fontSize.body, lineHeight: 24, color: colors.ink }]}>
           {cardData.detail || cardData.content}

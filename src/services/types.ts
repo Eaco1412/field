@@ -215,6 +215,12 @@ export interface AnalysisResult {
   aiMood: number;
   analysis: string;
   cards?: CardRecommendation;
+  actionDetail?: {
+    description: string;
+    highlights: string[];
+    reason: string;
+    howToStart: string;
+  };
 }
 
 /** 持久化的全局应用状态 */
