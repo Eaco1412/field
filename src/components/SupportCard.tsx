@@ -49,16 +49,24 @@ const TYPE_CONFIG: Record<CardType, {
 
 interface SupportCardProps {
   card: SupportCardType;
+  journalId?: string;
 }
 
-export function SupportCard({ card }: SupportCardProps) {
+export function SupportCard({ card, journalId }: SupportCardProps) {
   const config = TYPE_CONFIG[card.type];
 
   const handlePress = () => {
-    router.push({
-      pathname: '/sub/card-detail',
-      params: { card: JSON.stringify(card) },
-    });
+    if (journalId) {
+      router.push({
+        pathname: '/sub/card-detail',
+        params: { journalId, cardType: card.type },
+      });
+    } else {
+      router.push({
+        pathname: '/sub/card-detail',
+        params: { card: JSON.stringify(card) },
+      });
+    }
   };
 
   const sentences = card.content.split('。');

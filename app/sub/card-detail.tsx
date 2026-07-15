@@ -10,6 +10,7 @@ import { ScreenWrapper } from '../../src/components/ScreenWrapper';
 import { Pill } from '../../src/components/Pill';
 import { colors, fontSize, radius, spacing } from '../../src/theme';
 import type { SupportCard as SupportCardType, CardType } from '../../src/services/types';
+import { useApp } from '../../src/context/AppContext';
 
 const TYPE_CONFIG: Record<CardType, {
   bg: string;
@@ -30,13 +31,31 @@ const HELP_RESOURCES = [
 ];
 
 export default function CardDetailScreen() {
-  const { card } = useLocalSearchParams<{ card: string }>();
+  const { card, journalId, cardType } = useLocalSearchParams<{
+    card?: string;
+    journalId?: string;
+    cardType?: string;
+  }>();
+  const { state } = useApp();
 
   let cardData: SupportCardType | null = null;
-  try {
-    cardData = JSON.parse(card || '');
-  } catch (e) {
-    // ignore
+
+  // 方式1：通过 journalId + cardType 从全局 state 读取（推荐，数据完整）
+  if (journalId && cardType) {
+    const journal = state.journals.find((j) => j.id === journalId);
+    if (journal?.cards) {
+      const type = cardType as CardType;
+      cardData = journal.cards[type] ?? null;
+    }
+  }
+
+  // 方式2：通过 URL 参数直接传 JSON（兼容旧链接）
+  if (!cardData && card) {
+    try {
+      cardData = JSON.parse(card);
+    } catch {
+      // ignore
+    }
   }
 
   if (!cardData) {

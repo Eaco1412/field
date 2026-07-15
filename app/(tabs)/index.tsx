@@ -242,9 +242,9 @@ export default function HomeScreen() {
             />
           ) : (
             <>
-              <SupportCard card={todayJournal.cards!.understanding} />
-              <SupportCard card={todayJournal.cards!.action} />
-              <SupportCard card={todayJournal.cards!.help} />
+              <SupportCard card={todayJournal.cards!.understanding} journalId={todayJournal.id} />
+              <SupportCard card={todayJournal.cards!.action} journalId={todayJournal.id} />
+              <SupportCard card={todayJournal.cards!.help} journalId={todayJournal.id} />
             </>
           )}
         </View>

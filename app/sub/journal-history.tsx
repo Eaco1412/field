@@ -220,9 +220,9 @@ function JournalDetailItem({ entry }: DetailItemProps) {
             <CrisisCard info={entry.cards.crisisInfo} />
           ) : (
             <>
-              <SupportCard card={entry.cards.understanding} />
-              <SupportCard card={entry.cards.action} />
-              <SupportCard card={entry.cards.help} />
+              <SupportCard card={entry.cards.understanding} journalId={entry.id} />
+              <SupportCard card={entry.cards.action} journalId={entry.id} />
+              <SupportCard card={entry.cards.help} journalId={entry.id} />
             </>
           )}
         </View>
