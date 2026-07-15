@@ -93,8 +93,10 @@ function reducer(state: AppDataState, action: Action): AppDataState {
         settings: {
           ...DEFAULT_SETTINGS,
           ...action.payload.settings,
-          // 旧版本没有 aiModel 字段时补默认值
-          aiModel: action.payload.settings?.aiModel ?? DEFAULT_SETTINGS.aiModel,
+          // 旧版本 aiModel 为 deepseek-v4-flash 时迁移到 deepseek-chat
+          aiModel: (String(action.payload.settings?.aiModel) === 'deepseek-v4-flash')
+            ? 'deepseek-chat'
+            : (action.payload.settings?.aiModel ?? DEFAULT_SETTINGS.aiModel),
         },
         initialized: true,
       };

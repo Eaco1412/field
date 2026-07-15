@@ -40,30 +40,17 @@ export default function CardDetailScreen() {
 
   let cardData: SupportCardType | null = null;
 
-  // 方式1：通过 journalId + cardType 从全局 state 读取（推荐，数据完整）
   if (journalId && cardType) {
     const journal = state.journals.find((j) => j.id === journalId);
-    console.log('===== card-detail DEBUG =====');
-    console.log('journalId:', journalId);
-    console.log('cardType:', cardType);
-    console.log('journal found:', !!journal);
-    console.log('journal cards:', journal?.cards ? Object.keys(journal.cards) : 'none');
     if (journal?.cards) {
       const type = cardType as CardType;
       cardData = journal.cards[type] ?? null;
-      console.log('cardData:', JSON.stringify(cardData, null, 2));
-      console.log('has detail:', !!cardData?.detail);
-      console.log('detail length:', cardData?.detail?.length ?? 0);
-      console.log('content length:', cardData?.content?.length ?? 0);
     }
   }
 
-  // 方式2：通过 URL 参数直接传 JSON（兼容旧链接）
   if (!cardData && card) {
     try {
       cardData = JSON.parse(card);
-      console.log('===== card-detail DEBUG (JSON fallback) =====');
-      console.log('cardData:', JSON.stringify(cardData, null, 2));
     } catch {
       // ignore
     }

@@ -60,46 +60,13 @@ interface AiRawResponse {
   help?: unknown;
 }
 
-const SYSTEM_PROMPT = `你是"旷野笔记"App 里的情绪陪伴者。你在阅读用户写下的一段心事，并产出结构化分析。
-
-【人设与语气】
-- 你像一个温柔的同行者，不是心理医生，绝不下诊断、不用临床术语（如"抑郁""焦虑症""治疗""病人"）。
-- 语气平实温暖，像同龄朋友。简短，每段不超过 2-3 句。
-- 用中文，称呼"你"。
-- 不说"你应该""你必须"，用"也许""试试看""可以"。
-- 不比较痛苦、不否定感受（不说"这没什么""别人更惨""别多想"）。
-
-【安全规则——最高优先级】
-- 如果用户表达自伤、自杀、不想活、结束生命等意图，riskLevel 必须为 "crisis"：此时 understanding / action / help 三个字段都填空字符串，actionItemId 填空字符串，analysis 写一句温柔的关切（如"我看到你现在很痛苦，你不是一个人"）。不要给任何行动建议。
-- riskLevel="elevated"：强烈的自我否定、被霸凌/孤立、持续低落，但未到危机。
-- riskLevel="normal"：一般困扰、平淡、轻微情绪波动。
-
-【themes 取值】从这些里选零到多个：academic（学业/考试/成绩）、selfDoubt（自我否定/觉得自己不够好）、interpersonal（人际/被孤立/被欺负）、lifeConfusion（迷茫/无意义/空虚）、academicAnxiety（焦虑/紧张/压力）。都不命中则返回空数组。
-
-【aiMood】1-5 整数：1=很差（危机/极度低落），2=不好，3=一般，4=不错，5=很好。
-
-【卡片内容要求】
-- understanding：一句话共情，简短有力，不超过30字，放在卡片上展示。必填。
-- understandingDetail：详细的共情回复，300字左右，分3-4段，用"\n\n"分隔段落。先共情让用户感到被听见，再温和地给出一个新的视角或小小的鼓励。不要急着给建议，不要说教。必填。
-- action：一个具体、微小、今天就能做的小行动，不要宏大目标。同时从给定行动清单里选最贴近的 actionItemId。必填。
-- help：温柔的求助引导，不施压。必填。
-
-【输出格式】只输出一个 JSON 对象，不要任何额外文字、不要 markdown 代码块。结构：
-{"themes":["..."],"riskLevel":"...","aiMood":N,"analysis":"...","understanding":"...","understandingDetail":"...","action":"...","actionItemId":"...","help":"..."}`;
+const SYSTEM_PROMPT = `你是情绪陪伴者。输出纯JSON，无markdown标记。
+字段：themes(数组，可选：academic/selfDoubt/interpersonal/lifeConfusion/academicAnxiety)，riskLevel(normal/elevated/crisis)，aiMood(1-5)，analysis(简短回应)，understanding(≤30字共情)，understandingDetail(100字左右回复)，action(小行动)，actionItemId(从用户消息中选)，help(求助引导)。
+有自伤意图时riskLevel=crisis，其他字段为空。`;
 
 function buildUserPrompt(content: string): string {
-  const itemList = ACTION_ITEMS.map(
-    (i) => `- ${i.id} | ${i.title} | ${i.description}`,
-  ).join('\n');
-  return `用户心事原文：
-"""
-${content}
-"""
-
-可选的行动清单（actionItemId 只能从中选一个，选最贴近用户当前状态的；若都不贴近可填空字符串）：
-${itemList}
-
-请按系统提示的 JSON 格式输出分析结果。`;
+  return `用户心事：${content}
+请输出JSON分析。actionItemId填空即可。`;
 }
 
 function asString(v: unknown): string {
@@ -200,30 +167,63 @@ function makeCard(
 async function callViaProxy(content: string, model: AiModelId): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), AI_CONFIG.timeoutMs);
+
+  const requestBody = {
+    model,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: buildUserPrompt(content) },
+    ],
+    temperature: AI_CONFIG.temperature,
+    max_tokens: 400,
+    response_format: { type: 'json_object' },
+  };
+
+  logger.info('[realAiService] >>> 发送请求到代理', {
+    proxyUrl: AI_CONFIG.proxyUrl,
+    model,
+    systemPromptLen: SYSTEM_PROMPT.length,
+    userPromptLen: buildUserPrompt(content).length,
+    requestBody: JSON.stringify(requestBody).slice(0, 500),
+  });
+
   try {
     const res = await fetch(AI_CONFIG.proxyUrl, {
       method: 'POST',
       signal: controller.signal,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(content) },
-        ],
-        temperature: AI_CONFIG.temperature,
-        response_format: { type: 'json_object' },
-        max_tokens: 1200,
-      }),
+      body: JSON.stringify(requestBody),
     });
+
+    logger.info('[realAiService] <<< 代理返回 HTTP 状态', { status: res.status, statusText: res.statusText });
+
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      logger.error('[realAiService] <<< 代理返回错误', { status: res.status, body: text.slice(0, 500) });
       throw new Error(`Proxy HTTP ${res.status}: ${text.slice(0, 200)}`);
     }
+
     const data = await res.json();
-    // Worker 透传 DeepSeek 的响应结构
+
+    // 打印完整的 DeepSeek 响应结构
+    logger.info('[realAiService] <<< DeepSeek 完整响应', {
+      model: data?.model,
+      id: data?.id,
+      hasChoices: !!data?.choices,
+      choicesLen: data?.choices?.length,
+      finishReason: data?.choices?.[0]?.finish_reason,
+      usage: data?.usage,
+    });
+
     const message = data?.choices?.[0]?.message?.content;
+    logger.info('[realAiService] <<< message.content 详情', {
+      type: typeof message,
+      length: typeof message === 'string' ? message.length : 0,
+      preview: typeof message === 'string' ? message.slice(0, 300) : String(message),
+    });
+
     if (typeof message !== 'string') {
+      logger.error('[realAiService] message.content 不是字符串！', { actualValue: JSON.stringify(data?.choices?.[0]).slice(0, 500) });
       throw new Error('模型返回结构异常');
     }
     return message;
@@ -232,20 +232,34 @@ async function callViaProxy(content: string, model: AiModelId): Promise<string> 
   }
 }
 
+function cleanJsonResponse(text: string): string {
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```json\s*/i, '');
+  cleaned = cleaned.replace(/\s*```$/i, '');
+  cleaned = cleaned.replace(/^```\s*/i, '');
+  return cleaned;
+}
+
+function tryParseJson(text: string): AiRawResponse | null {
+  try {
+    const cleaned = cleanJsonResponse(text);
+    return JSON.parse(cleaned) as AiRawResponse;
+  } catch {
+    return null;
+  }
+}
+
 export const realAiService: AiService = {
   async analyze(content: string, mode: JournalMode, model?: AiModelId): Promise<AnalysisResult> {
-    // 1) 本地危机闸：命中即走危机流程，不调用模型
     if (CRISIS_KEYWORDS.some((kw) => content.includes(kw))) {
       logger.info('[realAiService] crisis keyword hit, skip model');
       return buildAnalysisResult(content, mode);
     }
 
-    // 2) quiet 模式：用户选择只记录，不做 AI 分析
     if (mode === 'quiet') {
       return buildAnalysisResult(content, mode);
     }
 
-    // 3) 未配置代理：回退本地
     if (!AI_ENABLED) {
       logger.warn('[realAiService] AI_ENABLED is false, fallback to mock');
       return buildAnalysisResult(content, mode);
@@ -253,36 +267,105 @@ export const realAiService: AiService = {
 
     logger.info('[realAiService] calling DeepSeek via proxy...', { proxyUrl: AI_CONFIG.proxyUrl });
 
-    // 4) 通过代理调用 DeepSeek（仅传当条日志，不含历史）
-    const selectedModel: AiModelId = model ?? 'deepseek-v4-flash';
+    const selectedModel: AiModelId = model ?? 'deepseek-chat';
     try {
       const rawText = await callViaProxy(content, selectedModel);
-      logger.debug('[realAiService] raw response', { raw: rawText.slice(0, 600) });
-      const parsed = JSON.parse(rawText) as AiRawResponse;
-      logger.debug('[realAiService] parsed fields', {
-        hasUnderstanding: !!parsed.understanding,
-        hasUnderstandingDetail: !!parsed.understandingDetail,
-        understandingLen: String(parsed.understanding).length,
-        detailLen: String(parsed.understandingDetail).length,
-      });
-      const result = mapToAnalysisResult(parsed);
-      if (!result) {
-        logger.warn('[realAiService] model output incomplete, fallback to mock');
-        return buildAnalysisResult(content, mode);
+
+      // 打印完整的原始返回（不截断，方便排查）
+      logger.info('[realAiService] ===== DeepSeek 原始回复 START =====');
+      logger.info('[realAiService] 原始回复长度', { length: rawText.length });
+      logger.info('[realAiService] 原始回复全文', { raw: rawText });
+      logger.info('[realAiService] ===== DeepSeek 原始回复 END =====');
+
+      let parsed = tryParseJson(rawText);
+      logger.info('[realAiService] 第一次 JSON 解析结果', { success: !!parsed });
+
+      if (!parsed) {
+        logger.warn('[realAiService] JSON 直接解析失败，尝试从文本中提取 JSON');
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          logger.info('[realAiService] 从文本中提取到 JSON 片段', { matched: jsonMatch[0].slice(0, 200) });
+          parsed = tryParseJson(jsonMatch[0]);
+          logger.info('[realAiService] 提取后 JSON 解析结果', { success: !!parsed });
+        } else {
+          logger.warn('[realAiService] 文本中没有找到 JSON 片段');
+        }
       }
-      logger.info('[realAiService] analyze ok', {
+
+      if (!parsed) {
+        logger.warn('[realAiService] 无法解析为 JSON，使用原始文本作为 understandingDetail');
+        return {
+          themes: [],
+          riskLevel: 'normal',
+          aiMood: 3,
+          analysis: '谢谢你愿意分享。我在这里陪着你。',
+          cards: {
+            understanding: makeCard(
+              'understanding',
+              '理解卡',
+              '谢谢你愿意分享。我在这里陪着你。',
+              undefined,
+              rawText.slice(0, 500),
+            ),
+            action: makeCard('action', '行动卡', '给自己一点时间，做一件让自己舒服的事', 'act2'),
+            help: makeCard('help', '求助卡', '如果你需要，随时可以回来。'),
+          },
+        };
+      }
+
+      // 打印解析后的每个字段
+      logger.info('[realAiService] 解析后的字段详情', {
+        themes: parsed.themes,
+        riskLevel: parsed.riskLevel,
+        aiMood: parsed.aiMood,
+        analysis: typeof parsed.analysis === 'string' ? parsed.analysis.slice(0, 100) : parsed.analysis,
+        understanding: typeof parsed.understanding === 'string' ? parsed.understanding.slice(0, 100) : parsed.understanding,
+        understandingDetail: typeof parsed.understandingDetail === 'string' ? `${parsed.understandingDetail.slice(0, 100)}... (总长${parsed.understandingDetail.length})` : parsed.understandingDetail,
+        action: typeof parsed.action === 'string' ? parsed.action.slice(0, 100) : parsed.action,
+        actionItemId: parsed.actionItemId,
+        help: typeof parsed.help === 'string' ? parsed.help.slice(0, 100) : parsed.help,
+      });
+
+      const result = mapToAnalysisResult(parsed);
+      logger.info('[realAiService] mapToAnalysisResult 结果', { success: !!result });
+
+      if (!result) {
+        logger.warn('[realAiService] mapToAnalysisResult 返回 null（字段不完整），使用 fallback');
+        return {
+          themes: [],
+          riskLevel: 'normal',
+          aiMood: 3,
+          analysis: '谢谢你愿意分享。',
+          cards: {
+            understanding: makeCard(
+              'understanding',
+              '理解卡',
+              parsed.understanding ? String(parsed.understanding).slice(0, 100) : '谢谢你愿意分享。',
+              undefined,
+              parsed.understandingDetail ? String(parsed.understandingDetail) : undefined,
+            ),
+            action: makeCard('action', '行动卡', parsed.action ? String(parsed.action) : '做一件让自己舒服的事', parsed.actionItemId ? String(parsed.actionItemId) : 'act2'),
+            help: makeCard('help', '求助卡', parsed.help ? String(parsed.help) : '如果你需要，随时可以回来。'),
+          },
+        };
+      }
+
+      logger.info('[realAiService] ===== 最终分析结果 =====', {
         model: selectedModel,
         themes: result.themes,
         riskLevel: result.riskLevel,
-        hasDetail: !!result.cards?.understanding?.detail,
-        detailLen: result.cards?.understanding?.detail?.length ?? 0,
-        understanding: result.cards?.understanding?.content?.slice(0, 60),
-        detailPreview: result.cards?.understanding?.detail?.slice(0, 80),
+        aiMood: result.aiMood,
+        understandingContent: result.cards?.understanding?.content?.slice(0, 80),
+        understandingDetailLen: result.cards?.understanding?.detail?.length ?? 0,
+        understandingDetailPreview: result.cards?.understanding?.detail?.slice(0, 120),
+        actionContent: result.cards?.action?.content?.slice(0, 80),
+        helpContent: result.cards?.help?.content?.slice(0, 80),
       });
+
       return result;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      logger.debug('[realAiService] analyze failed, fallback to mock', { error: errMsg });
+      logger.error('[realAiService] ===== 请求失败 =====', { error: errMsg, model: selectedModel });
       return buildAnalysisResult(content, mode);
     }
   },

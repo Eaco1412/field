@@ -158,6 +158,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: spacing.md,
     backgroundColor: colors.bg2,
-    borderRadius: radius.sm,
+    borderRadius: radius.button,
   },
 });

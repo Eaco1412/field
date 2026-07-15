@@ -19,8 +19,7 @@
 
 /** 可选的 DeepSeek 模型列表。 */
 export const AI_MODELS = [
-  { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', desc: '最新模型，速度快，效果好，推荐日常使用' },
-  { id: 'deepseek-chat', label: 'DeepSeek Chat', desc: '经典模型，稳定可靠' },
+  { id: 'deepseek-chat', label: 'DeepSeek Chat', desc: '经典模型，稳定可靠（推荐）' },
   { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', desc: '推理更深，适合复杂情绪，但更慢更贵' },
 ] as const;
 
