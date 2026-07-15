@@ -35,16 +35,8 @@ export default function CardDetailScreen() {
   let cardData: SupportCardType | null = null;
   try {
     cardData = JSON.parse(card || '');
-    logger.info('[card-detail] received card', {
-      type: cardData?.type,
-      hasDetail: !!cardData?.detail,
-      detailLen: cardData?.detail?.length ?? 0,
-      contentLen: cardData?.content?.length ?? 0,
-      contentPreview: cardData?.content?.slice(0, 50),
-      detailPreview: cardData?.detail?.slice(0, 80),
-    });
   } catch (e) {
-    logger.error('[card-detail] parse card failed', { error: String(e) });
+    // ignore
   }
 
   if (!cardData) {
