@@ -22,99 +22,142 @@
 
 ## 🚀 快速开始
 
-### 环境要求
+### 方式一：手机体验（推荐）
 
-- Node.js >= 20.x
-- npm 或 pnpm
-- 手机安装 [Expo Go](https://expo.dev/client)（推荐）或 Android/iOS 模拟器
+**前提条件：**
+- 手机安装 [Expo Go](https://expo.dev/client)（iOS App Store / Android Google Play）
+- 电脑和手机连接同一个 WiFi
 
-### 安装依赖
+**步骤：**
 
-```bash
-npm install
-```
-
-### 启动开发服务器
-
-```bash
-npx expo start
-```
-
-启动后会显示二维码：
-
-- **手机体验（推荐）**：用手机相机扫描二维码，自动跳转到 Expo Go
-- **Web 体验**：在终端按 `w` 键，自动打开浏览器
-- **Android 模拟器**：在终端按 `a` 键
-- **iOS 模拟器**：在终端按 `i` 键（仅 macOS）
-
-### 清除数据
-
-进入「我的」→「设置」→「清除所有数据」即可重置 Demo 数据。
-
----
-
-## 🧩 项目结构
-
-```
-├── app/                    # Expo Router 页面路由
-│   ├── (tabs)/            # 底部 Tab 页（首页/发现/我的）
-│   └── sub/               # 二级页面
-├── src/
-│   ├── components/        # UI 组件
-│   ├── config/            # 配置（AI 模型等）
-│   ├── constants/         # 全局文案
-│   ├── context/           # 全局状态（AppContext）
-│   ├── hooks/             # 自定义 Hooks
-│   ├── services/          # 业务逻辑层
-│   │   ├── api/           # 真实 API 实现
-│   │   └── mock/          # Mock 数据实现
-│   ├── theme/             # 主题样式
-│   └── utils/             # 工具函数
-├── api/                   # Vercel Serverless Function（AI 代理）
-├── worker/                # Cloudflare Worker 版本（已弃用）
-├── app.json               # Expo 配置
-└── package.json
-```
-
----
-
-## 🤖 AI 功能配置
-
-### 使用内置 Mock 数据（默认）
-
-默认使用 Mock 数据，无需配置任何 API Key 即可体验完整功能。
-
-### 接入真实 DeepSeek API
-
-项目使用 **Vercel Serverless Function** 作为代理，避免在前端暴露 API Key。
-
-#### 方式一：部署到 Vercel
-
-1. 推送代码到 GitHub/GitLab
-2. 在 Vercel Dashboard 导入项目，自动部署
-3. 配置环境变量：
-   - `DEEPSEEK_API_KEY`：你的 DeepSeek API Key
-4. 部署完成后获得 URL（格式：`https://你的项目名.vercel.app/api/ai-proxy`）
-5. 修改 [src/config/ai.ts](src/config/ai.ts) 中的 `proxyUrl` 为你的 Vercel 地址
-
-#### 方式二：本地开发代理
-
-1. 在项目根目录创建 `.env.local` 文件：
-   ```
-   DEEPSEEK_API_KEY=你的APIKey
-   ```
-2. 启动 Vercel 本地开发：
+1. **下载代码**
    ```bash
-   npx vercel dev
+   git clone https://github.com/你的用户名/你的仓库名.git
+   cd 你的仓库名
    ```
-3. 修改 `proxyUrl` 为 `http://localhost:3000/api/ai-proxy`
+
+2. **安装依赖**
+   ```bash
+   npm install
+   ```
+
+3. **启动开发服务器**
+   ```bash
+   npx expo start
+   ```
+
+4. **扫码体验**
+   - 终端会显示二维码
+   - 用手机相机扫描二维码 → 自动跳转到 Expo Go
+   - 等待几秒钟加载完成，即可开始使用
+
+> ✨ **开箱即用**：项目已经配置好 AI 代理，默认使用真实 DeepSeek API 进行情绪分析。
+
+### 方式二：Web 浏览器体验
+
+1. 启动开发服务器后，在终端按 `w` 键
+2. 自动打开浏览器，访问 `http://localhost:8081`
+3. 在浏览器中直接使用 App
+
+> ⚠️ 注意：Web 版体验不如手机端，部分原生功能可能受限。
+
+### 方式三：Android/iOS 模拟器
+
+**Android 模拟器：**
+1. 安装 [Android Studio](https://developer.android.com/studio)
+2. 创建虚拟设备（推荐 Pixel 7，API 33+）
+3. 在终端按 `a` 键，自动安装到模拟器
+
+**iOS 模拟器（仅 macOS）：**
+1. 安装 Xcode
+2. 在终端按 `i` 键，自动启动 iOS 模拟器
+
+---
+
+## 📦 AI 功能配置
+
+### 默认配置：开箱即用
+
+项目已经配置好 AI 代理（部署在 Vercel），默认使用真实 DeepSeek API 进行情绪分析。下载代码后无需任何配置，直接运行即可体验完整 AI 功能。
+
+### 使用自己的 DeepSeek API Key
+
+如果你想使用自己的 API Key（避免消耗我的额度），可以按以下步骤部署自己的代理：
+
+#### 步骤一：部署到 Vercel
+
+点击下方按钮，一键部署 AI 代理服务：
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/你的用户名/你的仓库名&env=DEEPSEEK_API_KEY&project-name=emotion-starfield-proxy&repo-name=emotion-starfield-proxy)
+
+1. 点击上面的按钮，跳转到 Vercel
+2. 登录/注册 Vercel 账号（推荐用 GitHub 账号）
+3. 填写 `DEEPSEEK_API_KEY`（你的 DeepSeek API Key，可在 [DeepSeek Console](https://platform.deepseek.com/) 获取）
+4. 点击「Deploy」开始部署（约 1-2 分钟）
+5. 部署完成后，复制你的代理 URL（格式：`https://你的项目名.vercel.app`）
+
+#### 步骤二：更新代理配置
+
+修改 `src/config/ai.ts` 文件中的 `proxyUrl`：
+
+```typescript
+// src/config/ai.ts
+export const AI_CONFIG = {
+  proxyUrl: 'https://你的项目名.vercel.app/api/ai-proxy', // 修改为你的 Vercel 地址
+  // ...
+};
+```
 
 ### 切换 AI 模型
 
-进入「我的」→「设置」→「AI 模型」，点击切换：
+进入「我的」→「设置」→「AI 模型」：
 
-- `deepseek-chat` — DeepSeek 对话模型（默认，速度快、价格低）
-- `deepseek-reasoner` — DeepSeek 推理模型（推理更深，适合复杂情绪）
+- **deepseek-chat** — 对话模型（默认，速度快、价格低）
+- **deepseek-reasoner** — 推理模型（推理更深，适合复杂情绪分析）
+
+---
+
+## 🐛 常见问题排查
+
+### Q1: Expo Go 扫码后无法连接
+
+**解决方案：**
+- 确保电脑和手机在同一个 WiFi 网络
+- 检查防火墙是否阻止了端口 8081 和 19000-19006
+- 尝试重启开发服务器：`npx expo start --clear`
+
+### Q2: AI 代理部署后返回 400 错误
+
+**检查项：**
+- 是否已在 Vercel 配置 `DEEPSEEK_API_KEY`
+- API Key 是否正确（无空格、无换行）
+- 是否重新部署了项目（环境变量需要重新部署才生效）
+
+**测试方法：**
+```bash
+curl -X POST https://你的项目名.vercel.app/api/ai-proxy \
+  -H "Content-Type: application/json" \
+  -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"你好"}]}'
+```
+
+### Q3: AI 请求超时
+
+**可能原因：**
+- Vercel 免费版函数执行时间限制为 10 秒
+- DeepSeek API 响应较慢
+
+**解决方案：**
+- 升级 Vercel Pro（无执行时间限制）
+- 或使用 Cloudflare Worker 部署代理（无时间限制）
+
+### Q4: 依赖安装失败
+
+**解决方案：**
+```bash
+npm install --legacy-peer-deps
+# 或
+pnpm install
+```
 
 ---
 
@@ -165,18 +208,10 @@ npx expo start
 
 ## 🙏 致谢
 
-本项目的开发过程中，**Trae IDE** 发挥了至关重要的作用。从项目架构设计、代码编写、AI 功能集成到 Vercel 部署，绝大部分工作都是在 Trae 的辅助下完成的。Trae 的智能代码补全、架构分析和问题排查能力极大地提高了开发效率，让整个项目能够快速落地。
-
-感谢 Trae 提供如此强大的 AI 开发工具！
+本项目的开发过程中，**Trae IDE** 发挥了至关重要的作用。从项目架构设计、代码编写、AI 功能集成到 Vercel 部署，绝大部分工作都是在 Trae 的辅助下完成的。
 
 ---
 
-## �️ 投票支持
-
-如果这个项目对你有帮助，欢迎为我投票支持！👉 [https://forum.trae.cn/t/topic/168038](https://forum.trae.cn/t/topic/168038)
-
----
-
-## �📄 License
+## 📄 License
 
 MIT
